@@ -1,0 +1,564 @@
+/* Gothic lavender productivity app — dark, moody, minimal */
+
+:root {
+    --bg: #1a1625;
+    --bg-card: #252030;
+    --text: #e8e4ef;
+    --muted: #9d94b0;
+    --accent: #b8a9c9;
+    --accent-soft: #7c6b9d;
+    --border: #3d3550;
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    --serif: "Cormorant Garamond", "Georgia", serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+h1, h2, h3 {
+    font-family: var(--serif);
+    font-weight: 600;
+}
+
+h1 {
+    font-size: 1.75rem;
+    margin: 0 0 0.5rem 0;
+}
+
+h2 {
+    font-size: 1.2rem;
+    margin: 0 0 0.75rem 0;
+}
+
+h3 {
+    font-size: 1.05rem;
+    margin: 0 0 0.5rem 0;
+}
+
+.date {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+}
+
+header {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow);
+}
+
+nav {
+    display: flex;
+    gap: 1.5rem;
+}
+
+nav a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+nav a:hover {
+    color: var(--text);
+}
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+}
+
+/* Dashboard widgets */
+.widgets {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.widget {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.widget-label {
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.widget-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.totals {
+    margin-bottom: 1.5rem;
+}
+
+.totals h2 {
+    font-size: 0.95rem;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.breakdown {
+    font-size: 0.95rem;
+    color: var(--text);
+    margin: 0;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2rem 0;
+}
+
+/* Rewards */
+.rewards-section {
+    margin-bottom: 1.5rem;
+}
+
+.add-reward-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.add-reward-form input[type="text"] {
+    width: 160px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.add-reward-form input[type="number"] {
+    width: 70px;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.add-reward-form select {
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.add-reward-form button {
+    padding: 0.5rem 1rem;
+    background: var(--accent-soft);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.add-reward-form button:hover {
+    background: var(--accent);
+    color: var(--bg);
+}
+
+.rewards-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.reward-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.reward-item:last-child {
+    border-bottom: none;
+}
+
+.reward-item.unlocked {
+    opacity: 0.85;
+}
+
+.reward-name {
+    font-weight: 500;
+    min-width: 120px;
+}
+
+.reward-req {
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.reward-form-inline {
+    margin: 0;
+    margin-left: auto;
+}
+
+.btn-unlock {
+    padding: 0.3rem 0.6rem;
+    background: var(--accent-soft);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.btn-unlock:hover {
+    background: var(--accent);
+    color: var(--bg);
+}
+
+.reward-badge {
+    font-size: 0.8rem;
+    color: var(--accent);
+    margin-left: auto;
+}
+
+.btn-delete-small {
+    padding: 0.2rem 0.5rem;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.btn-delete-small:hover {
+    color: #e8a0a0;
+    border-color: #6b4040;
+}
+
+/* Add habit */
+.add-habit-section {
+    margin-bottom: 1.5rem;
+}
+
+.add-habit-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.add-habit-form input[type="text"] {
+    width: 220px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.add-habit-form button {
+    padding: 0.5rem 1rem;
+    background: var(--accent-soft);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.add-habit-form button:hover {
+    background: var(--accent);
+    color: var(--bg);
+}
+
+/* Habit sections */
+.habit-section {
+    margin-bottom: 1.5rem;
+}
+
+.habit-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.habit-header h2 {
+    margin: 0;
+}
+
+.delete-form {
+    margin: 0;
+}
+
+.btn-delete {
+    padding: 0.35rem 0.75rem;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.btn-delete:hover {
+    color: #e8a0a0;
+    border-color: #6b4040;
+}
+
+.empty-hint {
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+/* Track form */
+.track-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.track-form label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.track-form input[type="number"],
+.track-form input[type="text"],
+.track-form select {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.track-form input[type="number"] {
+    width: 80px;
+}
+
+.track-form input[type="text"] {
+    width: 120px;
+}
+
+.track-form select {
+    width: auto;
+    min-width: 50px;
+}
+
+.track-form button {
+    padding: 0.5rem 1rem;
+    background: var(--accent-soft);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.track-form button:hover {
+    background: var(--accent);
+    color: var(--bg);
+}
+
+.entry-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.entry-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+.entry-sticker {
+    font-size: 1.1rem;
+}
+
+/* Reflection form */
+.reflection-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.reflection-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.reflection-form span {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.reflection-form textarea,
+.reflection-form input[type="text"],
+.reflection-form select {
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.reflection-form textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.reflection-form select {
+    width: fit-content;
+}
+
+.reflection-form button {
+    padding: 0.6rem 1.25rem;
+    background: var(--accent-soft);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    width: fit-content;
+}
+
+.reflection-form button:hover {
+    background: var(--accent);
+    color: var(--bg);
+}
+
+/* Books & Movies */
+.add-media-section {
+    margin-bottom: 1.5rem;
+}
+
+.media-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.media-form label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.media-form input[type="text"] {
+    width: 180px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.media-form select {
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.media-form button {
+    padding: 0.5rem 1rem;
+    background: var(--accent-soft);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.media-form button:hover {
+    background: var(--accent);
+    color: var(--bg);
+}
+
+.media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.media-card {
+    padding: 1.25rem;
+}
+
+.media-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.media-type {
+    font-size: 0.8rem;
+    color: var(--accent);
+    text-transform: uppercase;
+}
+
+.delete-form-inline {
+    margin: 0;
+}
+
+.media-title {
+    font-family: var(--serif);
+    font-size: 1.1rem;
+    margin: 0 0 0.5rem 0;
+}
+
+.media-rating {
+    color: var(--accent);
+    font-size: 1rem;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: 0.1em;
+}
+
+.media-review {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.5;
+}

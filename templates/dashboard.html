@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Habit Tracker{% endblock %}
+
+{% block content %}
+<h1>Today's Dashboard</h1>
+<p class="date">Date: {{ today }}</p>
+
+<section class="widgets">
+    <div class="widget card">
+        <span class="widget-label">Total Hours Today</span>
+        <span class="widget-value">{{ total_hours|float_format }}h</span>
+    </div>
+    <div class="widget card">
+        <span class="widget-label">Streak</span>
+        <span class="widget-value">{{ streak }} days</span>
+    </div>
+    <div class="widget card">
+        <span class="widget-label">Today's Mood</span>
+        <span class="widget-value">{{ today_mood|title if today_mood else '—' }}</span>
+    </div>
+</section>
+
+<section class="totals card">
+    <h2>Breakdown</h2>
+    {% if habit_data %}
+    <p class="breakdown">
+        {% for item in habit_data %}
+        {{ item.habit.name }}: {{ item.total|float_format }}h
+        {% if not loop.last %} &nbsp;|&nbsp; {% endif %}
+        {% endfor %}
+    </p>
+    {% else %}
+    <p class="breakdown">No entries yet today.</p>
+    {% endif %}
+</section>
+
+<section class="rewards-section card">
+    <h2>Rewards</h2>
+    <form method="post" class="add-reward-form">
+        <input type="hidden" name="action" value="add_reward">
+        <input type="text" name="reward_name" placeholder="Reward name" required>
+        <select name="requirement_type">
+            <option value="hours">Hours</option>
+            <option value="streak">Streak (days)</option>
+        </select>
+        <input type="number" name="requirement_value" min="1" value="1" placeholder="Goal">
+        <button type="submit">Add Reward</button>
+    </form>
+    <ul class="rewards-list">
+        {% for r in rewards %}
+        <li class="reward-item {% if r.unlocked %}unlocked{% endif %}">
+            <span class="reward-name">{{ r.name }}</span>
+            <span class="reward-req">{{ r.requirement_value }} {{ r.requirement_type }}</span>
+            {% if not r.unlocked %}
+            <form method="post" class="reward-form-inline">
+                <input type="hidden" name="action" value="unlock_reward">
+                <input type="hidden" name="reward_id" value="{{ r.id }}">
+                <button type="submit" class="btn-unlock">Unlock</button>
+            </form>
+            {% else %}
+            <span class="reward-badge">Unlocked</span>
+            {% endif %}
+            <form method="post" class="reward-form-inline" onsubmit="return confirm('Delete this reward?');">
+                <input type="hidden" name="action" value="delete_reward">
+                <input type="hidden" name="reward_id" value="{{ r.id }}">
+                <button type="submit" class="btn-delete-small">Delete</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% if not rewards %}
+    <p class="empty-hint">Add a reward to motivate yourself.</p>
+    {% endif %}
+</section>
+
+<section class="add-habit-section card">
+    <h2>Add Habit</h2>
+    <form method="post" class="add-habit-form">
+        <input type="hidden" name="action" value="add_habit">
+        <input type="text" name="habit_name" placeholder="e.g. Coding, Reading, Exercise" required>
+        <button type="submit">Add Habit</button>
+    </form>
+</section>
+
+{% for item in habit_data %}
+<section class="habit-section card">
+    <div class="habit-header">
+        <h2>{{ item.habit.name }}</h2>
+        <form method="post" class="delete-form" onsubmit="return confirm('Delete this habit? Its time entries will be removed.');">
+            <input type="hidden" name="action" value="delete_habit">
+            <input type="hidden" name="habit_id" value="{{ item.habit.id }}">
+            <button type="submit" class="btn-delete">Delete Habit</button>
+        </form>
+    </div>
+
+    <form method="post" class="track-form">
+        <input type="hidden" name="action" value="add_entry">
+        <input type="hidden" name="habit_id" value="{{ item.habit.id }}">
+        <label>Hours: <input type="number" name="hours" step="0.5" min="0.1" required></label>
+        <label>Note: <input type="text" name="note" placeholder="optional"></label>
+        <label>Sticker:
+            <select name="sticker">
+                <option value="">—</option>
+                {% for s in stickers %}
+                <option value="{{ s }}">{{ s }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit">Add Entry</button>
+    </form>
+
+    <ul class="entry-list">
+        {% for e in item.entries %}
+        <li>{% if e.sticker %}<span class="entry-sticker">{{ e.sticker }}</span>{% endif %} {{ e.hours }}h {% if e.note %}— {{ e.note }}{% endif %}</li>
+        {% endfor %}
+    </ul>
+</section>
+{% endfor %}
+
+{% if not habit_data %}
+<p class="empty-hint">Add a habit above to start tracking your time.</p>
+{% endif %}
+{% endblock %}

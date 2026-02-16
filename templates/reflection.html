@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Reflection - Habit Tracker{% endblock %}
+
+{% block content %}
+<h1>Daily Reflection</h1>
+<p class="date">Date: {{ entry_date }}</p>
+
+<section class="card">
+<form method="post" class="reflection-form">
+    <label>
+        <span>Reflection</span>
+        <textarea name="reflection_text" rows="5" placeholder="How did today go?">{{ reflection.reflection_text if reflection else '' }}</textarea>
+    </label>
+
+    <label>
+        <span>One Win</span>
+        <input type="text" name="win" placeholder="What went well today?" value="{{ reflection.win if reflection else '' }}">
+    </label>
+
+    <label>
+        <span>Improvement</span>
+        <input type="text" name="improvement" placeholder="What can you do better?" value="{{ reflection.improvement if reflection else '' }}">
+    </label>
+
+    <label>
+        <span>Mood</span>
+        <select name="mood">
+            <option value="great" {{ 'selected' if reflection and reflection.mood == 'great' else '' }}>Great</option>
+            <option value="good" {{ 'selected' if reflection and reflection.mood == 'good' else '' }}>Good</option>
+            <option value="neutral" {{ 'selected' if (not reflection) or reflection.mood == 'neutral' else '' }}>Neutral</option>
+            <option value="tired" {{ 'selected' if reflection and reflection.mood == 'tired' else '' }}>Tired</option>
+            <option value="low" {{ 'selected' if reflection and reflection.mood == 'low' else '' }}>Low</option>
+        </select>
+    </label>
+
+    <button type="submit">Save Reflection</button>
+</form>
+</section>
+{% endblock %}

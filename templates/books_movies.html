@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Books & Movies{% endblock %}
+
+{% block content %}
+<h1>Books & Movies</h1>
+
+<section class="add-media-section card">
+    <h2>Add Entry</h2>
+    <form method="post" class="media-form">
+        <input type="hidden" name="action" value="add_media">
+        <label>Title: <input type="text" name="title" placeholder="Title" required></label>
+        <label>Type:
+            <select name="type">
+                <option value="book">Book</option>
+                <option value="movie">Movie</option>
+            </select>
+        </label>
+        <label>Rating:
+            <select name="rating">
+                <option value="1">1 ★</option>
+                <option value="2">2 ★</option>
+                <option value="3" selected>3 ★</option>
+                <option value="4">4 ★</option>
+                <option value="5">5 ★</option>
+            </select>
+        </label>
+        <label>Review: <input type="text" name="review" placeholder="Short review (optional)"></label>
+        <button type="submit">Add</button>
+    </form>
+</section>
+
+<section class="media-grid">
+    {% for e in entries %}
+    <article class="media-card card">
+        <div class="media-card-header">
+            <span class="media-type">{{ e.type|title }}</span>
+            <form method="post" class="delete-form-inline" onsubmit="return confirm('Delete this entry?');">
+                <input type="hidden" name="action" value="delete_media">
+                <input type="hidden" name="media_id" value="{{ e.id }}">
+                <button type="submit" class="btn-delete-small">×</button>
+            </form>
+        </div>
+        <h3 class="media-title">{{ e.title }}</h3>
+        <p class="media-rating">{{ e.rating|stars }}</p>
+        {% if e.review %}<p class="media-review">{{ e.review }}</p>{% endif %}
+    </article>
+    {% endfor %}
+</section>
+
+{% if not entries %}
+<p class="empty-hint">No books or movies yet. Add one above.</p>
+{% endif %}
+{% endblock %}
