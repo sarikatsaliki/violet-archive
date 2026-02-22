@@ -32,18 +32,31 @@ A minimal personal habit and reflection web app built with Python Flask and SQLi
 - **habits** – habits you create (add/delete anytime)
 - **habit_entries** – time entries for each habit (hours + optional note)
 - **reflections** – daily reflection, win, improvement, mood
+- **User Authentication** – Secure Sign Up and Login system using password hashing.
+- **Books & Movies** – Log media consumption with star ratings and reviews.
+
+
+## 🌐 Deployment & Data Persistence
+This project is configured for deployment on **Render**. 
+
+> **Note:** The live demo uses an SQLite database on Render's free tier. Because the free tier uses an ephemeral file system, data is reset whenever the server restarts or goes to sleep. To maintain a permanent database, run the project locally or connect a persistent PostgreSQL instance.
+
 
 ## Project Structure
 
 ```
 habittracker/
-├── app.py           # Flask app and routes
-├── requirements.txt # Python dependencies
+├── app.py              # Main Flask application (Routes, Auth, and DB init)
+├── requirements.txt    # Python dependencies (now includes gunicorn)
 ├── static/
-│   └── style.css    # Minimal CSS
+│   └── style.css       # Custom styles for dashboard and forms
 ├── templates/
-│   ├── base.html
-│   ├── dashboard.html
-│   └── reflection.html
-└── habittracker.db  # SQLite database (created on first run)
+│   ├── base.html       # Main layout with Navigation Bar
+│   ├── index.html      # Landing page / Welcome page
+│   ├── login.html      # User Login form
+│   ├── signup.html     # User Registration form
+│   ├── dashboard.html  # Habit tracking interface
+│   ├── reflection.html # Daily mood and win logger
+│   └── media.html      # Books & Movies logging with ratings
+└── habittracker.db     # SQLite database (Excluded from Git via .gitignore)
 ```
