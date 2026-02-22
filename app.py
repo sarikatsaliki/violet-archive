@@ -1,35 +1,58 @@
-"""
-Gothic Lavender Productivity App
-Flask + SQLite. Tracks habits, rewards, reflections, books & movies.
-
-Database:
-  habits, habit_entries, reflections, rewards, media
-"""
-
+import os
 import sqlite3
 from datetime import date, timedelta
+from functools import wraps
 from pathlib import Path
 
-from flask import Flask, render_template, request, redirect, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
+from flask import Flask, flash, render_template, request, redirect, session, url_for
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 DB_PATH = Path(__file__).parent / "habittracker.db"
 
-# Sticker options for habit entries
 STICKERS = ["🌸", "⭐", "💻", "📚", "🌙", "☕", "🎀", "✨"]
 
 
 def get_db():
-    """Get a database connection."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get("user_id"):
+            return redirect(url_for("login"))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+@app.template_filter("float_format")
+def float_format(value):
+    try:
+        return f"{float(value):.1f}"
+    except (TypeError, ValueError):
+        return "0.0"
+@app.template_filter("stars")
+def stars_filter(value):
+    try:
+        return "★" * int(value) + "☆" * (5 - int(value))
+    except (ValueError, TypeError):
+        return ""
+
+
 def init_db():
-    """Create database tables and run migrations."""
     conn = get_db()
     conn.executescript("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE TABLE IF NOT EXISTS habits (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE
@@ -47,11 +70,13 @@ def init_db():
 
         CREATE TABLE IF NOT EXISTS reflections (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            entry_date DATE NOT NULL UNIQUE,
+            user_id INTEGER,
+            entry_date DATE NOT NULL,
             reflection_text TEXT,
             win TEXT,
             improvement TEXT,
-            mood TEXT NOT NULL
+            mood TEXT NOT NULL,
+            UNIQUE(user_id, entry_date)
         );
 
         CREATE TABLE IF NOT EXISTS rewards (
@@ -70,23 +95,85 @@ def init_db():
             review TEXT
         );
     """)
-    try:
-        conn.execute("ALTER TABLE habit_entries ADD COLUMN sticker TEXT")
-    except sqlite3.OperationalError:
-        pass
     conn.commit()
     conn.close()
 
 
+# ---------------- AUTH ---------------- #
+
 @app.route("/")
 def index():
-    """Redirect to dashboard."""
-    return redirect(url_for("dashboard"))
+    if session.get("user_id"):
+        return redirect(url_for("dashboard"))
+    return redirect(url_for("login"))
 
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        if not username or not password:
+            flash("Username and password required.")
+            return render_template("signup.html")
+
+        conn = get_db()
+        try:
+            cur = conn.execute(
+                "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                (username, generate_password_hash(password))
+            )
+            conn.commit()
+            user_id = cur.lastrowid
+        except sqlite3.IntegrityError:
+            conn.close()
+            flash("Username already exists.")
+            return render_template("signup.html")
+
+        conn.close()
+
+        session["user_id"] = user_id
+        session["username"] = username
+        return redirect(url_for("dashboard"))
+
+    return render_template("signup.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        conn = get_db()
+        user = conn.execute(
+            "SELECT * FROM users WHERE username = ?", (username,)
+        ).fetchone()
+        conn.close()
+
+        if not user or not check_password_hash(user["password_hash"], password):
+            flash("Invalid username or password.")
+            return render_template("login.html")
+
+        session["user_id"] = user["id"]
+        session["username"] = user["username"]
+        return redirect(url_for("dashboard"))
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
+# ---------------- DASHBOARD ---------------- #
 
 @app.route("/dashboard", methods=["GET", "POST"])
+@login_required
 def dashboard():
-    """Dashboard - add/delete habits, log time entries, show totals."""
     today = date.today().isoformat()
     conn = get_db()
 
@@ -99,7 +186,7 @@ def dashboard():
                 try:
                     conn.execute("INSERT INTO habits (name) VALUES (?)", (name,))
                 except sqlite3.IntegrityError:
-                    pass  # habit name already exists
+                    pass
 
         elif action == "delete_habit":
             habit_id = request.form.get("habit_id", type=int)
@@ -109,56 +196,48 @@ def dashboard():
 
         elif action == "add_entry":
             habit_id = request.form.get("habit_id", type=int)
-            hours = request.form.get("hours", type=float, default=0)
-            note = request.form.get("note", "").strip()
-            sticker = request.form.get("sticker", "").strip() or None
-            if habit_id and hours and hours > 0:
+            hours = request.form.get("hours", type=float)
+            note = request.form.get("note", "")
+            sticker = request.form.get("sticker")
+            if habit_id and hours:
                 conn.execute(
                     "INSERT INTO habit_entries (habit_id, entry_date, hours, note, sticker) VALUES (?, ?, ?, ?, ?)",
-                    (habit_id, today, hours, note or None, sticker),
+                    (habit_id, today, hours, note, sticker),
                 )
 
         elif action == "add_reward":
-            name = request.form.get("reward_name", "").strip()
-            req_type = request.form.get("requirement_type", "hours")
-            req_value = request.form.get("requirement_value", type=int, default=1)
-            if name and req_value and req_value > 0:
-                conn.execute(
-                    "INSERT INTO rewards (name, requirement_type, requirement_value, unlocked) VALUES (?, ?, ?, 0)",
-                    (name, req_type, req_value),
-                )
+            name = request.form.get("reward_name")
+            req_type = request.form.get("requirement_type")
+            req_value = request.form.get("requirement_value", type=int)
+            conn.execute(
+                "INSERT INTO rewards (name, requirement_type, requirement_value) VALUES (?, ?, ?)",
+                (name, req_type, req_value),
+            )
 
         elif action == "unlock_reward":
             reward_id = request.form.get("reward_id", type=int)
-            if reward_id:
-                conn.execute("UPDATE rewards SET unlocked = 1 WHERE id = ?", (reward_id,))
+            conn.execute("UPDATE rewards SET unlocked = 1 WHERE id = ?", (reward_id,))
 
         elif action == "delete_reward":
             reward_id = request.form.get("reward_id", type=int)
-            if reward_id:
-                conn.execute("DELETE FROM rewards WHERE id = ?", (reward_id,))
+            conn.execute("DELETE FROM rewards WHERE id = ?", (reward_id,))
 
         conn.commit()
 
-    # Load all habits
     habits = conn.execute("SELECT * FROM habits ORDER BY name").fetchall()
 
-    # For each habit, get today's entries and total
     habit_data = []
     total_hours = 0
 
     for habit in habits:
         entries = conn.execute(
-            "SELECT * FROM habit_entries WHERE habit_id = ? AND entry_date = ? ORDER BY id",
+            "SELECT * FROM habit_entries WHERE habit_id = ? AND entry_date = ?",
             (habit["id"], today),
         ).fetchall()
         habit_total = sum(e["hours"] for e in entries)
         total_hours += habit_total
-        habit_data.append(
-            {"habit": habit, "entries": entries, "total": habit_total}
-        )
+        habit_data.append({"habit": habit, "entries": entries, "total": habit_total})
 
-    # Streak: consecutive days (going back) with at least one habit entry
     streak = 0
     check_date = date.today()
     while True:
@@ -173,13 +252,13 @@ def dashboard():
             break
 
     today_reflection = conn.execute(
-        "SELECT mood FROM reflections WHERE entry_date = ?", (today,)
+        "SELECT mood FROM reflections WHERE user_id = ? AND entry_date = ?",
+        (session["user_id"], today),
     ).fetchone()
+
     today_mood = today_reflection["mood"] if today_reflection else None
 
-    rewards = conn.execute(
-        "SELECT * FROM rewards ORDER BY unlocked, id"
-    ).fetchall()
+    rewards = conn.execute("SELECT * FROM rewards ORDER BY unlocked, id").fetchall()
 
     conn.close()
 
@@ -193,92 +272,71 @@ def dashboard():
         stickers=STICKERS,
         rewards=rewards,
     )
-
+# ---------------- REFLECTION ---------------- #
 
 @app.route("/reflection", methods=["GET", "POST"])
+@login_required
 def reflection():
-    """Reflection page - daily reflection, win, improvement, mood."""
     today = date.today().isoformat()
     conn = get_db()
-
+    
     if request.method == "POST":
-        reflection_text = request.form.get("reflection_text", "").strip()
-        win = request.form.get("win", "").strip()
-        improvement = request.form.get("improvement", "").strip()
-        mood = request.form.get("mood", "neutral")
-
-        conn.execute(
-            """REPLACE INTO reflections (entry_date, reflection_text, win, improvement, mood)
-               VALUES (?, ?, ?, ?, ?)""",
-            (today, reflection_text, win, improvement, mood),
-        )
+        reflection_text = request.form.get("reflection_text")
+        win = request.form.get("win")
+        improvement = request.form.get("improvement")
+        mood = request.form.get("mood")
+        
+        conn.execute("""
+            INSERT INTO reflections (user_id, entry_date, reflection_text, win, improvement, mood)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id, entry_date) DO UPDATE SET
+                reflection_text=excluded.reflection_text,
+                win=excluded.win,
+                improvement=excluded.improvement,
+                mood=excluded.mood
+        """, (session["user_id"], today, reflection_text, win, improvement, mood))
         conn.commit()
+        flash("Reflection saved!")
+        return redirect(url_for("dashboard"))
 
-    entry_date = request.args.get("date", today)
-    reflection_row = conn.execute(
-        "SELECT * FROM reflections WHERE entry_date = ?", (entry_date,)
+    reflection = conn.execute(
+        "SELECT * FROM reflections WHERE user_id = ? AND entry_date = ?",
+        (session["user_id"], today)
     ).fetchone()
     conn.close()
+    
+    return render_template("reflection.html", reflection=reflection, entry_date=today)
+# ---------------- BOOKS & MOVIES ---------------- #
 
-    return render_template(
-        "reflection.html",
-        today=today,
-        entry_date=entry_date,
-        reflection=dict(reflection_row) if reflection_row else None,
-    )
-
-
-@app.route("/books-movies", methods=["GET", "POST"])
+@app.route("/media", methods=["GET", "POST"])
+@login_required
 def books_movies():
-    """Books & Movies page - add and view entries with rating and review."""
     conn = get_db()
-
+    
     if request.method == "POST":
         action = request.form.get("action")
+        
         if action == "add_media":
-            title = request.form.get("title", "").strip()
-            media_type = request.form.get("type", "book")
-            rating = request.form.get("rating", type=int, default=3)
-            review = request.form.get("review", "").strip() or None
-            if title and 1 <= rating <= 5:
-                conn.execute(
-                    "INSERT INTO media (title, type, rating, review) VALUES (?, ?, ?, ?)",
-                    (title, media_type, rating, review),
-                )
+            title = request.form.get("title")
+            media_type = request.form.get("type")
+            rating = request.form.get("rating")
+            review = request.form.get("review")
+            conn.execute(
+                "INSERT INTO media (title, type, rating, review) VALUES (?, ?, ?, ?)",
+                (title, media_type, rating, review)
+            )
+            
         elif action == "delete_media":
-            media_id = request.form.get("media_id", type=int)
-            if media_id:
-                conn.execute("DELETE FROM media WHERE id = ?", (media_id,))
+            media_id = request.form.get("media_id")
+            conn.execute("DELETE FROM media WHERE id = ?", (media_id,))
+            
         conn.commit()
+        return redirect(url_for("books_movies"))
 
-    entries = conn.execute(
-        "SELECT * FROM media ORDER BY id DESC"
-    ).fetchall()
+    # Fetching the data to show on the page
+    entries = conn.execute("SELECT * FROM media ORDER BY id DESC").fetchall()
     conn.close()
-
     return render_template("books_movies.html", entries=entries)
-
-
-@app.template_filter("float_format")
-def float_format(value):
-    """Format float to one decimal place."""
-    try:
-        return f"{float(value):.1f}"
-    except (TypeError, ValueError):
-        return "0.0"
-
-
-@app.template_filter("stars")
-def stars(rating):
-    """Return 1-5 star display string."""
-    try:
-        r = int(rating)
-        r = max(0, min(5, r))
-    except (TypeError, ValueError):
-        r = 0
-    return "★" * r + "☆" * (5 - r)
-
-
 if __name__ == "__main__":
     init_db()
-    app.run(debug=True, port=5000)
+    app.run(debug=True)

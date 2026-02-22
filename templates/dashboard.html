@@ -9,7 +9,7 @@
 <section class="widgets">
     <div class="widget card">
         <span class="widget-label">Total Hours Today</span>
-        <span class="widget-value">{{ total_hours|float_format }}h</span>
+        <span class="widget-value">{{ "%.1f"|format(total_hours) }}h</span>
     </div>
     <div class="widget card">
         <span class="widget-label">Streak</span>
