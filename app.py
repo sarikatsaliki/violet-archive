@@ -55,17 +55,22 @@ def init_db():
 
         CREATE TABLE IF NOT EXISTS habits (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            UNIQUE(user_id, name),
+            FOREIGN KEY (user_id) REFERENCES users(id)
         );
 
         CREATE TABLE IF NOT EXISTS habit_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
             habit_id INTEGER NOT NULL,
             entry_date DATE NOT NULL,
             hours REAL NOT NULL,
             note TEXT,
             sticker TEXT,
-            FOREIGN KEY (habit_id) REFERENCES habits(id)
+            FOREIGN KEY (habit_id) REFERENCES habits(id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
         );
 
         CREATE TABLE IF NOT EXISTS reflections (
@@ -95,6 +100,12 @@ def init_db():
             review TEXT
         );
     """)
+    # Ensure multi-user columns exist for databases created before user support
+    for table in ("habits", "habit_entries"):
+        columns = conn.execute(f"PRAGMA table_info({table})").fetchall()
+        if not any(col["name"] == "user_id" for col in columns):
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN user_id INTEGER")
+
     conn.commit()
     conn.close()
 
@@ -152,8 +163,12 @@ def login():
         ).fetchone()
         conn.close()
 
-        if not user or not check_password_hash(user["password_hash"], password):
-            flash("Invalid username or password.")
+        if not user:
+            flash("No account found with that username. You can sign up to create one.")
+            return render_template("login.html")
+
+        if not check_password_hash(user["password_hash"], password):
+            flash("Incorrect password.")
             return render_template("login.html")
 
         session["user_id"] = user["id"]
@@ -175,6 +190,7 @@ def logout():
 @login_required
 def dashboard():
     today = date.today().isoformat()
+    user_id = session["user_id"]
     conn = get_db()
 
     if request.method == "POST":
@@ -184,15 +200,24 @@ def dashboard():
             name = request.form.get("habit_name", "").strip()
             if name:
                 try:
-                    conn.execute("INSERT INTO habits (name) VALUES (?)", (name,))
+                    conn.execute(
+                        "INSERT INTO habits (user_id, name) VALUES (?, ?)",
+                        (user_id, name),
+                    )
                 except sqlite3.IntegrityError:
                     pass
 
         elif action == "delete_habit":
             habit_id = request.form.get("habit_id", type=int)
             if habit_id:
-                conn.execute("DELETE FROM habit_entries WHERE habit_id = ?", (habit_id,))
-                conn.execute("DELETE FROM habits WHERE id = ?", (habit_id,))
+                conn.execute(
+                    "DELETE FROM habit_entries WHERE habit_id = ? AND user_id = ?",
+                    (habit_id, user_id),
+                )
+                conn.execute(
+                    "DELETE FROM habits WHERE id = ? AND user_id = ?",
+                    (habit_id, user_id),
+                )
 
         elif action == "add_entry":
             habit_id = request.form.get("habit_id", type=int)
@@ -201,8 +226,8 @@ def dashboard():
             sticker = request.form.get("sticker")
             if habit_id and hours:
                 conn.execute(
-                    "INSERT INTO habit_entries (habit_id, entry_date, hours, note, sticker) VALUES (?, ?, ?, ?, ?)",
-                    (habit_id, today, hours, note, sticker),
+                    "INSERT INTO habit_entries (user_id, habit_id, entry_date, hours, note, sticker) VALUES (?, ?, ?, ?, ?, ?)",
+                    (user_id, habit_id, today, hours, note, sticker),
                 )
 
         elif action == "add_reward":
@@ -224,15 +249,18 @@ def dashboard():
 
         conn.commit()
 
-    habits = conn.execute("SELECT * FROM habits ORDER BY name").fetchall()
+    habits = conn.execute(
+        "SELECT * FROM habits WHERE user_id = ? ORDER BY name",
+        (user_id,),
+    ).fetchall()
 
     habit_data = []
     total_hours = 0
 
     for habit in habits:
         entries = conn.execute(
-            "SELECT * FROM habit_entries WHERE habit_id = ? AND entry_date = ?",
-            (habit["id"], today),
+            "SELECT * FROM habit_entries WHERE habit_id = ? AND user_id = ? AND entry_date = ?",
+            (habit["id"], user_id, today),
         ).fetchall()
         habit_total = sum(e["hours"] for e in entries)
         total_hours += habit_total
@@ -242,8 +270,8 @@ def dashboard():
     check_date = date.today()
     while True:
         row = conn.execute(
-            "SELECT 1 FROM habit_entries WHERE entry_date = ? LIMIT 1",
-            (check_date.isoformat(),),
+            "SELECT 1 FROM habit_entries WHERE user_id = ? AND entry_date = ? LIMIT 1",
+            (user_id, check_date.isoformat()),
         ).fetchone()
         if row:
             streak += 1
